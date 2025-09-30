@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Graph Cycle Detection to Reveal Suspicious Ethereum Token Transfer Behaviour</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Impress.js CSS -->
+    <link href="https://unpkg.com/impress.js@1.1.0/css/impress-demo.css" rel="stylesheet">
+    
+    <!-- Speaker Notes Plugin CSS -->
+    <style>
+        .notes {
+            display: none;
+        }
+    </style>
+    
+    <!-- Custom CSS -->
+    <style>
+        /* Advanced Animation Classes for .present state */
+        .step.present .fly-in-left {
+            animation: flyInLeft 0.8s ease-out 0.3s both;
+        }
+        
+        .step.present .fly-in-right {
+            animation: flyInRight 0.8s ease-out 0.5s both;
+        }
+        
+        .step.present .fly-in-up {
+            animation: flyInUp 0.8s ease-out 0.7s both;
+        }
+        
+        .step.present .fade-in-scale {
+            animation: fadeInScale 1s ease-out 0.4s both;
+        }
+        
+        .step.present .rotate-in {
+            animation: rotateIn 1s ease-out 0.6s both;
+        }
+        
+        .step.present .bounce-in {
+            animation: bounceInAdvanced 1.2s ease-out 0.5s both;
+        }
+        
+        /* Keyframe Animations */
+        @keyframes flyInLeft {
+            0% {
+                opacity: 0;
+                transform: translateX(-100px) rotateY(-90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0) rotateY(0deg);
+            }
+        }
+        
+        @keyframes flyInRight {
+            0% {
+                opacity: 0;
+                transform: translateX(100px) rotateY(90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0) rotateY(0deg);
+            }
+        }
+        
+        @keyframes flyInUp {
+            0% {
+                opacity: 0;
+                transform: translateY(50px) rotateX(90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) rotateX(0deg);
+            }
+        }
+        
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: scale(0.3) rotate(-180deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        @keyframes rotateIn {
+            0% {
+                opacity: 0;
+                transform: rotateZ(-180deg) scale(0);
+            }
+            100% {
+                opacity: 1;
+                transform: rotateZ(0deg) scale(1);
+            }
+        }
+        
+        @keyframes bounceInAdvanced {
+            0% {
+                opacity: 0;
+                transform: scale(0.3) translateY(-100px);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.1) translateY(0px);
+            }
+            70% {
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Hide animated elements initially */
+        .fly-in-left,
+        .fly-in-right,
+        .fly-in-up,
+        .fade-in-scale,
+        .rotate-in,
+        .bounce-in {
+            opacity: 0;
+        }
+        
+        /* 3D Perspective enhancements */
+        #impress {
+            perspective: 2000px;
+        }
+        
+        .step {
+            transform-style: preserve-3d;
+        }
+        
+        /* Enhanced hover effects for 3D rotation */
+        .step:hover .diagram {
+            transform: scale(1.05) rotateY(10deg) rotateX(5deg);
+            transition: transform 0.5s ease;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow: hidden;
+        }
+        
+        .step {
+            width: 1200px;
+            height: 800px;
+            padding: 40px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            transition: all 1s ease-in-out;
+        }
+        
+        .step:not(.active) {
+            opacity: 0.3;
+            transform: scale(0.8);
+        }
+        
+        .step.active {
+            opacity: 1;
+            transform: scale(1);
+            animation: slideEntry 1s ease-out;
+        }
+        
+        @keyframes slideEntry {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateY(45deg);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.1) rotateY(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
+        }
+        
+        .highlight-box {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+            transform: translateX(-20px);
+            opacity: 0;
+            animation: slideInBox 0.8s ease-out 0.5s forwards;
+        }
+        
+        @keyframes slideInBox {
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .number-circle {
+            display: inline-flex;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            margin-right: 15px;
+            font-weight: bold;
+            animation: bounceIn 0.6s ease-out;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            text-align: center;
+        }
+        
+        @keyframes bounceIn {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .metric-result {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        .diagram {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .diagram:hover {
+            transform: scale(1.05) rotate(2deg);
+        }
+        
+        .title-slide {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+        
+        .title-slide h1 {
+            font-size: 0.2rem;
+            margin-bottom: 2px;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
+            line-height: 0.8;
+            padding: 0 60px;
+            max-width: 100%;
+            font-weight: bold;
+        }
+        
+        .authors {
+            font-size: 1.2rem;
+            margin: 1px 50px;
+            line-height: 1.2;
+        }
+        
+        .affiliation {
+            font-size: 1rem;
+            margin: 1px 0;
+            opacity: 0.9;
+            line-height: 0.8;
+        }
+        
+        .conference {
+            font-size: 0.13rem;
+            font-weight: bold;
+            margin-top: 3px;
+            color: #ffd700;
+            line-height: 0.8;
+        }
+        
+        h2 {
+            color: #1e3c72;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .title-slide h2 {
+            color: white;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        h3 {
+            color: #2a5298;
+            font-size: 1.8rem;
+            margin: 25px 0 15px 0;
+        }
+        
+        .content-list {
+            text-align: left;
+            font-size: 1.3rem;
+            line-height: 1.6;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .content-list li {
+            margin: 15px 0;
+            padding-left: 10px;
+        }
+        
+        .metric-formula {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            font-size: 1.4rem;
+        }
+        
+        .case-study {
+            background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%);
+            color: white;
+        }
+        
+        .case-study h2 {
+            color: white;
+            border-bottom-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .conclusion-slide {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .conclusion-slide h2 {
+            color: white;
+            border-bottom-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .thank-you {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .thank-you h2 {
+            color: white;
+            border-bottom-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .diagram {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .highlight-box {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .number-circle {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            line-height: 40px;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        
+        .metric-result {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .contact-info {
+            font-size: 1.1rem;
+            margin-top: 30px;
+        }
+        
+        /* Author images in circles */
+        .author-images {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .author-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            object-fit: cover;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .author-photo:hover {
+            transform: scale(1.1) rotateZ(5deg);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+        }
+        
+        .step-counter {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        
+        /* Smaller text for slide 9 (Illustrative Example) */
+        #example h2 {
+            font-size: 1.8rem;
+        }
+        
+        #example h3 {
+            font-size: 1.2rem;
+            margin: 15px 0 10px 0;
+        }
+        
+        #example .content-list {
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+        
+        #example .highlight-box p {
+            font-size: 0.9rem;
+            line-height: 1.3;
+            margin: 8px 0;
+        }
+        
+        #example .metric-result {
+            font-size: 1.5rem;
+            padding: 10px;
+            margin: 15px 0;
+        }
+        
+        #example .row {
+            margin-top: 15px;
+        }
+        
+        #example .diagram {
+            max-height: 300px;
+        }
+        
+        /* Smaller text for slide 11 (Visual Analysis Results) */
+        #visual-results h2 {
+            font-size: 1.8rem;
+        }
+        
+        #visual-results h3 {
+            font-size: 1.1rem;
+            margin: 10px 0 8px 0;
+        }
+        
+        #visual-results .col-md-6 p {
+            font-size: 0.85rem;
+            line-height: 1.2;
+            margin: 5px 0;
+        }
+        
+        #visual-results .diagram {
+            max-height: 220px;
+        }
+        
+        #visual-results .row {
+            margin-top: 10px;
+        }
+        
+        #visual-results .image-container {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="impress">
+        
+        <!-- Slide 1: Title Slide -->
+        <div id="title" class="step title-slide" data-x="0" data-y="0" data-z="0" data-scale="1" data-rotate="0">
+            <div style="padding: 60px 50px; height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <h2>Using Graph Cycle Detection to Reveal Suspicious Ethereum Token Transfer Behaviour</h2>
+                
+                <div class="author-images">
+                    <img src="latex/BCCA2025/images/Andrew_Le_Gear_Photo.jpg" alt="Dr. Andrew Le Gear" class="author-photo" title="Dr. Andrew Le Gear">
+                    <img src="latex/BCCA2025/images/Farshad_Toosi_Photo.png" alt="Dr. Farshad Ghassemi Toosi" class="author-photo" title="Dr. Farshad Ghassemi Toosi">
+                    <img src="latex/BCCA2025/images/Ashish_Kumar_Sai_Photo.png" alt="Dr. Ashish Rajendra Sai" class="author-photo" title="Dr. Ashish Rajendra Sai">
+                    <img src="latex/BCCA2025/images/Jim_Buckley_Photo.jpg" alt="Dr. Jim Buckley" class="author-photo" title="Dr. Jim Buckley">
+                </div>
+                
+                <div class="authors" style="margin-top: 3px;">
+                    <strong>Dr. Andrew Le Gear¹ • Dr. Farshad Ghassemi Toosi² • Dr. Ashish Rajendra Sai³ • Tawny Whatmore¹ • Dr. Jim Buckley⁴</strong>
+                </div>
+                
+                <div class="affiliation" style="margin-top: 2px;">
+                    ¹Horizon Globex Ltd. • ²Munster Technological University • ³University of Maastrict • ⁴Lero - University of Limerick
+                </div>
+                
+                <div class="conference" style="margin-top: 3px;">
+                    7th International Conference on Blockchain Computing and Applications (BCCA 2025) • Dubrovnik, Croatia
+                </div>
+            </div>
+            <div class="step-counter">1 / 13</div>
+        </div>
+
+        <!-- Slide 2: Introduction & Motivation -->
+        <div id="intro" class="step" data-x="1500" data-y="-500" data-z="-1000" data-scale="0.8" data-rotate="15" data-rotate-x="45" data-rotate-y="30">
+            <h2 class="fly-in-left">Introduction & Motivation</h2>
+            
+            <div class="highlight-box fly-in-right">
+                <h3>🚨 The Problem</h3>
+                <p class="content-list">Cryptocurrencies represent a market capitalization of over <strong>$300 billion</strong> but are largely unregulated and vulnerable to manipulation.</p>
+            </div>
+            
+            <div class="highlight-box fade-in-scale">
+                <h3>🎯 Our Focus</h3>
+                <p class="content-list">Detecting <strong>"Pump-and-Dump" schemes</strong>, where a token's value is artificially inflated through deceptive trading activity before the manipulator sells at a high price.</p>
+            </div>
+            
+            <div class="highlight-box bounce-in">
+                <h3>🛡️ The Goal</h3>
+                <p class="content-list">Develop a technique that can detect these attacks <strong>as they happen</strong>, providing alerts to protect potential investors.</p>
+            </div>
+            <div class="step-counter">2 / 13</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Welcome to our research on detecting cryptocurrency manipulation.
+                - Emphasize the massive market size and lack of regulation
+                - Explain pump-and-dump schemes clearly with examples
+                - Highlight the real-time detection goal
+            </div>
+        </div>
+
+        <!-- Slide 3: Background Work -->
+        <div id="background-work" class="step" data-x="2250" data-y="500" data-z="-750" data-scale="1.2" data-rotate="10" data-rotate-x="20" data-rotate-y="-25">
+            <h2 class="fly-in-left">Background Work</h2>
+            
+            <div class="content-list">
+                <p class="fade-in-scale"><strong>Building on three foundational research strands:</strong></p>
+                
+                <div style="margin-top: 30px;" class="fly-in-right">
+                    <p><span class="number-circle">1</span><strong>Cormen et al. (2009)</strong> - "Introduction to Algorithms" - foundational graph theory and cycle detection algorithms that form the theoretical basis for our traversal approach.</p>
+                </div>
+                
+                <div style="margin-top: 25px;" class="fly-in-left">
+                    <p><span class="number-circle">2</span><strong>Chikofsky & Cross (1990)</strong> - "Reverse engineering and design recovery: A taxonomy" - established systematic methodologies for moving up abstraction hierarchies to understand complex systems.</p>
+                </div>
+                
+                <div style="margin-top: 25px;" class="rotate-in">
+                    <p><span class="number-circle">3</span><strong>Johnson (1975)</strong> - "Finding all the elementary circuits of a directed graph" - pioneered exhaustive cycle enumeration techniques that inform our graph traversal strategy.</p>
+                </div>
+                
+                <div style="margin-top: 25px;" class="bounce-in">
+                    <p><span class="number-circle">4</span><strong>Spagnuolo et al. (2014)</strong> - "BitIodine: Extracting intelligence from the Bitcoin network" - demonstrated practical blockchain analysis using graph representations and traversal techniques.</p>
+                </div>
+                
+                <div style="margin-top: 25px;" class="fade-in-scale">
+                    <p><span class="number-circle">5</span><strong>Kalodner et al. (2017)</strong> - "BlockSci: Design and applications of a blockchain analysis platform" - established modern frameworks for large-scale blockchain transaction graph analysis.</p>
+                </div>
+            </div>
+            <div class="step-counter">3 / 17</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Three foundational research strands that inform our approach:
+                1. Graph Theory - Cormen provides algorithmic foundations, Johnson gives cycle enumeration theory
+                2. Reverse Engineering - Chikofsky establishes the systematic approach to understanding complex systems
+                3. Blockchain Analysis - Spagnuolo pioneered Bitcoin graph analysis, Kalodner created modern analysis frameworks
+                Emphasize how our work synthesizes these three strands into a novel blockchain forensics approach.
+            </div>
+        </div>
+
+        <!-- Slide 4: Our Contributions -->
+        <div id="contributions" class="step" data-x="3000" data-y="1000" data-z="-500" data-scale="2.5" data-rotate="-10" data-rotate-y="60" data-rotate-x="-30">
+            <h2 class="rotate-in">Our Contributions</h2>
+            
+            <div class="content-list">
+                <p class="fly-in-up"><strong>This paper makes three key contributions:</strong></p>
+                
+                <div style="margin-top: 40px;" class="fly-in-left">
+                    <p><span class="number-circle">1</span><strong>A novel analysis technique</strong>, using a graph-based metric, to reveal suspicious ERC-20 trading behaviour.</p>
+                </div>
+                
+                <div style="margin-top: 30px;" class="fade-in-scale">
+                    <p><span class="number-circle">2</span><strong>An evaluation of the technique</strong> using a real-world case study: the iFishYunYu attack on the Ethereum network.</p>
+                </div>
+                
+                <div style="margin-top: 30px;" class="bounce-in">
+                    <p><span class="number-circle">3</span><strong>A proposed threshold for the metric</strong>, calibrated using the results from the case study.</p>
+                </div>
+            </div>
+            <div class="step-counter">4 / 17</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Three main contributions:
+                1. Graph-based detection method - novel approach
+                2. Real case study validation - iFish attack
+                3. Practical threshold - actionable results
+            </div>
+        </div>
+
+        <!-- Slide 4: Background -->
+        <div id="background" class="step" data-x="4500" data-y="-800" data-z="1000" data-scale="0.6" data-rotate="25" data-rotate-x="-45" data-rotate-y="20">
+            <h2 class="fly-in-left">Background: Ethereum & Smart Contracts</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box fly-in-right">
+                    <h3>📱 Ethereum</h3>
+                    <p>A blockchain platform that supports not only its native cryptocurrency (Ether) but also complex programs via the Ethereum Virtual Machine (EVM).</p>
+                </div>
+                
+                <div class="highlight-box fade-in-scale">
+                    <h3>📋 Smart Contracts</h3>
+                    <p>Programs that run and store state on the blockchain, enabling complex use cases like modeling asset ownership.</p>
+                </div>
+                
+                <div class="highlight-box rotate-in">
+                    <h3>🪙 ERC-20 Token Standard</h3>
+                    <p>A common standard for smart contracts that models asset ownership and defines how tokens are transferred and queried. This is the foundation for Initial Coin Offerings (ICOs).</p>
+                </div>
+            </div>
+            <div class="step-counter">5 / 17</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Background context - establish technical foundation:
+                - Ethereum as a programmable blockchain
+                - Smart contracts enable complex applications
+                - ERC-20 standard creates the ICO ecosystem we're analyzing
+            </div>
+        </div>
+
+        <!-- Slide 5: Analysis Lifecycle -->
+        <div id="lifecycle" class="step" data-x="6000" data-y="1500" data-z="-2000" data-scale="0.3" data-rotate="-30" data-rotate-z="10" data-rotate-x="90" data-rotate-y="45">
+            <h2 class="bounce-in">Our Method: Analysis Lifecycle</h2>
+            
+            <div class="image-container fade-in-scale">
+                <img src="latex/BCCA2025/images/graph_analysis_lifecycle.png" alt="Graph Analysis Lifecycle" class="diagram">
+            </div>
+            
+            <div class="content-list" style="font-size: 1.1rem;">
+                <p class="fly-in-left"><span class="number-circle">1</span>Host an Ethereum node to access the blockchain</p>
+                <p class="fly-in-right"><span class="number-circle">2</span>Extract a targeted snapshot of blockchain transactions into graphSON format</p>
+                <p class="fly-in-left"><span class="number-circle">3</span>Import the data into a graph database (Apache Tinkerpop) for efficient querying</p>
+                <p class="fly-in-right"><span class="number-circle">4</span>Execute a Gremlin query to extract a sub-graph containing only the transaction cycles</p>
+                <p class="rotate-in"><span class="number-circle">5</span>Visualize the resulting cycle sub-graph using a tool like Gephi</p>
+            </div>
+            <div class="step-counter">6 / 17</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Five-step methodology:
+                1. Data collection from Ethereum
+                2. Format conversion to graph format
+                3. Database import for performance
+                4. Cycle detection with Gremlin
+                5. Visualization for analysis
+                Emphasize the technical pipeline and tools used.
+            </div>
+        </div>
+
+        <!-- Slide 6: Graph Definition - zoom in dramatically from previous slide -->
+        <div id="graph-def" class="step" data-x="7500" data-y="-1200" data-z="500" data-scale="3.5" data-rotate="40" data-rotate-y="-60" data-rotate-x="30">
+            <h2 class="rotate-in">Our Method: Graph Definition & Traversal</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box fly-in-left">
+                    <h3>📊 Graph Definition</h3>
+                    <p>We model the blockchain snapshot as an <strong>undirected cyclic graph</strong>:</p>
+                    <ul class="fade-in-scale">
+                        <li><strong>Vertices:</strong> Wallets or smart contracts</li>
+                        <li><strong>Edges:</strong> Transactions between them</li>
+                        <li><strong>Why Undirected?</strong> The flow of value can be ambiguous. A wallet can initiate a transfer that causes a contract to send tokens <em>to</em> that same wallet, making the direction of value transfer complex.</li>
+                    </ul>
+                </div>
+                
+                <div class="highlight-box bounce-in">
+                    <h3>🔍 Graph Traversal</h3>
+                    <p>We use the <strong>Gremlin query language</strong> to traverse the graph, starting from the ERC-20 contract under analysis to find all cyclic paths of a specific length.</p>
+                </div>
+            </div>
+            <div class="step-counter">7 / 17</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Graph modeling decisions:
+                - Undirected because value flow can be complex
+                - Vertices = accounts, edges = transactions
+                - Gremlin for efficient cycle detection
+                Explain why undirected graphs better represent complex smart contract interactions.
+            </div>
+        </div>
+
+        <!-- Slide 7: Gremlin Query & Technology Choices -->
+        <div id="gremlin-query" class="step" data-x="8250" data-y="800" data-z="-800" data-scale="1.1" data-rotate="75" data-rotate-x="-45" data-rotate-y="90">
+            <h2 class="fly-in-up">Gremlin Query & Technology Choices</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box rotate-in">
+                    <h3>🔍 The Gremlin Query</h3>
+                    <div class="fade-in-scale" style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin: 15px 0; text-align: left; font-family: 'Courier New', monospace; font-size: 0.7rem; line-height: 1.2;">
+                        <code>
+g.V()<br>
+&nbsp;&nbsp;.has('account','hex', '0x98b4ca8bd52e4ed1f28d3f30d9f567d1166c9483')<br>
+&nbsp;&nbsp;.as('a')&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// select iFish contract<br>
+&nbsp;&nbsp;.bothE().bothV()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// traverse edges<br>
+&nbsp;&nbsp;.repeat(simplePath()).times(2)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// repeat 2 iterations<br>
+&nbsp;&nbsp;.where(out().as('a'))&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// filter cycles back to iFish<br>
+&nbsp;&nbsp;.bothE().dedup().subgraph('subg').cap('subg').next()&nbsp;&nbsp;&nbsp;&nbsp;// export subgraph
+                        </code>
+                    </div>
+                </div>
+                
+                <div class="highlight-box bounce-in">
+                    <h3>🤔 Why Not Modern Python Libraries?</h3>
+                    <ul class="fly-in-left" style="text-align: left; font-size: 0.9rem; line-height: 1.3;">
+                        <li><strong>Performance at Scale:</strong> Gremlin/TinkerPop offers superior performance for large-scale graph traversals with built-in parallelization and MapReduce support</li>
+                        <li><strong>Database Integration:</strong> Native graph database integration allows efficient storage and querying of blockchain data at enterprise scale</li>
+                        <li><strong>Gephi Visualization:</strong> Gephi's Force Atlas 2 algorithm provides specialized graph layout optimized for financial network analysis, with better complexity O(N log N)</li>
+                        <li><strong>Domain Expertise:</strong> Graph databases are specifically designed for this type of traversal problem, while Python libraries are more general-purpose</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-counter">8 / 17</div>
+            
+            <!-- Speaker Notes -->
+            <div class="notes">
+                Technical implementation details:
+                - Show actual Gremlin query syntax
+                - Justify technology choices over popular Python alternatives
+                - Emphasize performance and scalability needs
+                - Mention specialized graph algorithms in Gephi
+            </div>
+        </div>
+
+        <!-- Slide 8: The Metric - Introduction -->
+        <div id="metric" class="step" data-x="9000" data-y="2000" data-z="-1500" data-scale="1.3" data-rotate="60" data-rotate-x="-90" data-rotate-y="120">
+            <h2 class="rotate-in">The "Funding-Origin Indirection Metric" (ι)</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box">
+                    <h3>🎯 Purpose</h3>
+                    <p>To quantitatively confirm the visual findings from the graph.</p>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>💡 Concept</h3>
+                    <p>It measures the proportion of wallets funding an ICO that share a common ancestor wallet at various levels of indirection.</p>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>🔍 Why This Matters</h3>
+                    <p>In legitimate ICOs, funding typically comes from diverse, unrelated sources. In pump-and-dump schemes, multiple wallets often trace back to the same origin, creating artificial trading volume.</p>
+                </div>
+            </div>
+            <div class="step-counter">9 / 17</div>
+        </div>
+
+        <!-- Slide 9: The Metric - Formula & Interpretation -->
+        <div id="metric-formula" class="step" data-x="10500" data-y="-500" data-z="2000" data-scale="0.7" data-rotate="-20" data-rotate-z="-15">
+            <h2>Metric Formula & Interpretation</h2>
+            
+            <div class="content-list">
+                <div class="metric-formula">
+                    <strong>Formula:</strong> ι = τ / ψ<br><br>
+                    <em>Where:<br>
+                    τ = wallets sharing a common ancestor<br>
+                    ψ = total wallets transferring currency to the ERC-20</em>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>📈 Interpretation</h3>
+                    <ul>
+                        <li><strong>ι ≈ 0:</strong> Legitimate diverse funding sources</li>
+                        <li><strong>ι ≈ 1:</strong> Strong indicator of coordinated pump-and-dump scheme</li>
+                        <li><strong>ι > 0.5:</strong> Suspicious activity requiring investigation</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-counter">10 / 17</div>
+        </div>
+
+        <!-- Slide 10: Illustrative Example -->
+        <div id="example" class="step" data-x="12000" data-y="1800" data-z="-800" data-scale="1.1" data-rotate="-45" data-rotate-y="20">
+            <h2>Illustrative Example: "CycleToken"</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="highlight-box">
+                        <h3>🔧 Setup</h3>
+                        <p>We created a sample scenario with a token ("CycleToken"), a funding wallet ("fund"), and several layers of indirection accounts.</p>
+                    </div>
+                    
+                    <div class="highlight-box">
+                        <h3>⚡ Activity</h3>
+                        <p>We executed transactions typical of a pump-and-dump scheme.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="image-container">
+                        <img src="latex/BCCA2025/images/illustrativeExample.png" alt="Illustrative Example" class="diagram">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="highlight-box">
+                        <h3>📊 Visual Result</h3>
+                        <p>The resulting graph clearly shows the indicative topology of an attack: multiple cycles all sharing the token and the original funding account as common nodes.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="metric-result">
+                        Metric Result: ι = 0.75
+                    </div>
+                    <p><em>Quantitatively highlighting the suspicious setup</em></p>
+                </div>
+            </div>
+            <div class="step-counter">11 / 17</div>
+        </div>
+
+        <!-- Slide 11: Case Study Intro -->
+        <div id="case-intro" class="step case-study" data-x="13500" data-y="-2000" data-z="3000" data-scale="0.2" data-rotate="90" data-rotate-x="-120" data-rotate-y="180">
+            <h2 class="bounce-in">Case Study: The iFishYunYu Attack</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>📅 Background</h3>
+                    <p>In <strong>July 2018</strong>, Ethereum gas prices spiked <strong>500%</strong> due to over <strong>80,000 transactions</strong> involving the iFishYunYu ERC-20 token.</p>
+                </div>
+                
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>🤔 The Suspicions</h3>
+                    <p>The token had <strong>no clear purpose or backing</strong>, leading the community to suspect a deliberate attack to congest the network or fraudulently gain a listing on an exchange.</p>
+                </div>
+                
+                <div class="metric-result" style="background: rgba(255, 255, 255, 0.2); color: #fff;">
+                    💰 Transaction costs: <strong>$285,000</strong> in fees alone
+                </div>
+            </div>
+            <div class="step-counter">12 / 17</div>
+        </div>
+
+        <!-- Slide 12: Visual Analysis Results -->
+        <div id="visual-results" class="step" data-x="15000" data-y="1000" data-z="-1200" data-scale="0.8" data-rotate="15" data-rotate-z="25" data-rotate-x="45">
+            <h2 class="fly-in-up">Case Study Results: Visual Analysis</h2>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Cycles of Length 3</h3>
+                    <div class="image-container">
+                        <img src="latex/BCCA2025/images/iFish3hop.png" alt="iFish 3-hop cycles" class="diagram" style="max-height: 250px;">
+                    </div>
+                    <p>A visual inspection immediately identifies the iFish contract and a few wallets acting as the primary source of funds for other wallets.</p>
+                </div>
+                <div class="col-md-6">
+                    <h3>Cycles of Length 4</h3>
+                    <div class="image-container">
+                        <img src="latex/BCCA2025/images/ifishattack.png" alt="iFish attack pattern" class="diagram" style="max-height: 250px;">
+                    </div>
+                    <p>The pattern becomes even clearer. The vast majority of transactions originate from just <strong>8 common ancestor wallets</strong>.</p>
+                </div>
+            </div>
+            <div class="step-counter">13 / 17</div>
+        </div>
+
+        <!-- Slide 13: Quantitative Results -->
+        <div id="quant-results" class="step case-study" data-x="16500" data-y="-1500" data-z="1500" data-scale="4.0" data-rotate="-75" data-rotate-y="40" data-rotate-x="-60">
+            <h2 class="fade-in-scale">Case Study Results: Quantitative Analysis</h2>
+            
+            <div class="content-list">
+                <div class="metric-result" style="font-size: 3rem; background: rgba(255, 255, 255, 0.2); color: #fff;">
+                    Funding-Origin Indirection Metric (ι) = <strong>0.998</strong>
+                </div>
+                
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>🎯 Conclusion</h3>
+                    <p>This <strong>near-perfect score</strong> confirms that almost every transaction originated from wallets with a common ancestor.</p>
+                    <p>Every single one of these transactions was part of a cycle, highlighting the <strong>blatant and coordinated nature</strong> of the attack.</p>
+                </div>
+                
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>📊 Key Finding</h3>
+                    <p>The iFishYunYu incident was definitively <strong>not</strong> just an unprecedentedly highly-traded token, but a <strong>deliberate attack</strong>.</p>
+                </div>
+            </div>
+            <div class="step-counter">14 / 17</div>
+        </div>
+
+        <!-- Slide 14: Healthy Token Transfer Patterns -->
+        <div id="healthy-patterns" class="step" data-x="17250" data-y="500" data-z="-1000" data-scale="1.2" data-rotate="45" data-rotate-y="-30" data-rotate-x="15">
+            <h2>Contrast: Healthy Token Transfer Patterns</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box">
+                    <h3>📊 Legitimate ICO Examples</h3>
+                    <p>Applied the same cycle detection algorithm to busy trading periods of large market cap ICOs: <strong>Envion, Swissborg, Bancor, and Aeternity</strong></p>
+                </div>
+                
+                <div class="row" style="margin-top: 20px;">
+                    <div class="col-md-6">
+                        <div class="image-container">
+                            <img src="latex/BCCA2025/images/4icos.png" alt="Four legitimate ICOs cycle patterns" class="diagram" style="max-height: 280px;">
+                        </div>
+                        <p style="font-size: 0.9rem; margin-top: 10px;"><em>Cycle patterns for 4 legitimate ICOs (length 4)</em></p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="highlight-box">
+                            <h3>🔍 Key Differences</h3>
+                            <ul style="text-align: left; font-size: 0.9rem; line-height: 1.3;">
+                                <li><strong>Sparse Cycles:</strong> Few interconnected cycles, indicating diverse funding sources</li>
+                                <li><strong>Distributed Patterns:</strong> No single dominant funding origin</li>
+                                <li><strong>Lower Density:</strong> Less concentrated transaction patterns</li>
+                                <li><strong>Organic Growth:</strong> Natural trading behavior from independent investors</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="metric-result" style="font-size: 1.3rem; background: rgba(46, 204, 113, 0.1); color: #27ae60;">
+                            Expected ι ≈ 0.1 - 0.3<br>
+                            <small style="font-size: 0.8rem;">Indicating legitimate diverse funding</small>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="step-counter">15 / 17</div>
+        </div>
+
+        <!-- Slide 15: Conclusion & Future Work -->
+        <div id="conclusion" class="step conclusion-slide" data-x="18000" data-y="2500" data-z="-2500" data-scale="1.6" data-rotate="120" data-rotate-x="30" data-rotate-y="-45">
+            <h2>Conclusion & Future Work</h2>
+            
+            <div class="content-list">
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>🎯 Conclusion</h3>
+                    <p>Our graph-based analysis provides a <strong>novel and valuable forensics approach</strong> for regulators and auditors to detect malicious trading behaviour in ICOs.</p>
+                </div>
+                
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>🚀 Future Work</h3>
+                    <ul style="text-align: left; font-size: 1.2rem;">
+                        <li>Integrate our graph features with <strong>machine learning models</strong> (like Graph Neural Networks) to automate detection</li>
+                        <li>Extend the framework to detect other financial crimes like <strong>wash trading and rug pulls</strong></li>
+                        <li>Benchmark the metric against a larger population of ICOs to distinguish between <strong>normal and malicious trading profiles</strong></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-counter">16 / 17</div>
+        </div>
+
+        <!-- Slide 16: Thank You / Q&A (final dramatic zoom out) -->
+        <div id="thankyou" class="step thank-you" data-x="19500" data-y="0" data-z="8000" data-scale="6.0" data-rotate="360" data-rotate-z="720" data-rotate-x="90">
+            <h2 class="rotate-in">Thank You!</h2>
+            
+            <div class="fade-in-scale" style="font-size: 2.5rem; margin: 40px 0;">
+                Questions & Discussion
+            </div>
+            
+            <div class="content-list">
+                <div class="highlight-box" style="background: rgba(255, 255, 255, 0.2);">
+                    <h3>🙏 Acknowledgements</h3>
+                    <p>Special thanks to <strong>Science Foundation Ireland</strong> and <strong>Horizon Globex Ltd.</strong> for funding this research.</p>
+                </div>
+                
+                <div class="contact-info">
+                    <strong>Contact Information:</strong><br>
+                    📧 andrew.legear@horizon-globex.ie<br>
+                    📧 farshad.toosi@mtu.ie<br>
+                    📧 ashish.sai@maastrichtuniversity.nl<br>
+                    📧 tawny.whatmore@horizon-globex.ie<br>
+                    📧 jim.buckley@ul.ie
+                </div>
+            </div>
+            <div class="step-counter">17 / 17</div>
+        </div>
+
+        <!-- Overview slide - shows all slides in a grid -->
+        <div id="overview" class="step" data-x="9750" data-y="0" data-z="5000" data-scale="15" data-rotate-x="45" data-rotate-y="10">
+        </div>
+    </div>
+
+    <!-- Speaker Notes Console (hidden by default) -->
+    <div id="speaker-console" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; color: white; padding: 20px; box-sizing: border-box;">
+        <div style="display: flex; height: 100%;">
+            <div style="flex: 1; margin-right: 20px;">
+                <h3>Current Slide</h3>
+                <div id="current-slide-preview" style="border: 2px solid white; height: 200px; background: white; margin-bottom: 20px; overflow: hidden; transform: scale(0.3); transform-origin: top left;"></div>
+                <h3>Speaker Notes</h3>
+                <div id="current-notes" style="font-size: 16px; line-height: 1.5; overflow-y: auto; height: 200px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px;"></div>
+            </div>
+            <div style="flex: 1;">
+                <h3>Next Slide</h3>
+                <div id="next-slide-preview" style="border: 2px solid white; height: 200px; background: white; margin-bottom: 20px; overflow: hidden; transform: scale(0.3); transform-origin: top left;"></div>
+                <h3>Timer</h3>
+                <div id="presentation-timer" style="font-size: 24px; font-weight: bold; margin: 20px 0;"></div>
+                <h3>Controls</h3>
+                <button onclick="closeSpeakerConsole()" style="padding: 10px 20px; margin: 5px; font-size: 16px;">Close Console</button>
+                <button onclick="resetTimer()" style="padding: 10px 20px; margin: 5px; font-size: 16px;">Reset Timer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Impress.js -->
+    <script src="https://unpkg.com/impress.js@1.1.0/js/impress.js"></script>
+    
+    <!-- Speaker Notes Plugin -->
+    <script>
+        // Speaker Console functionality
+        let presentationStartTime = Date.now();
+        let timerInterval;
+        
+        function openSpeakerConsole() {
+            document.getElementById('speaker-console').style.display = 'block';
+            updateSpeakerConsole();
+            startTimer();
+        }
+        
+        function closeSpeakerConsole() {
+            document.getElementById('speaker-console').style.display = 'none';
+            if (timerInterval) clearInterval(timerInterval);
+        }
+        
+        function updateSpeakerConsole() {
+            const currentStep = document.querySelector('.step.active') || document.querySelector('.step.present') || document.querySelector('.step');
+            const allSteps = Array.from(document.querySelectorAll('.step'));
+            const currentIndex = allSteps.indexOf(currentStep);
+            const nextStep = allSteps[currentIndex + 1];
+            
+            // Update current slide notes
+            const notesElement = currentStep ? currentStep.querySelector('.notes') : null;
+            const notes = notesElement ? notesElement.textContent.trim() : 'No notes available for this slide.';
+            document.getElementById('current-notes').textContent = notes;
+            
+            // Update previews (simplified - in a real implementation you'd render slide thumbnails)
+            document.getElementById('current-slide-preview').innerHTML = `<div style="padding: 10px; color: black;">Current: ${currentStep ? currentStep.id : 'Unknown'}</div>`;
+            document.getElementById('next-slide-preview').innerHTML = `<div style="padding: 10px; color: black;">Next: ${nextStep ? nextStep.id : 'End of presentation'}</div>`;
+        }
+        
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - presentationStartTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                document.getElementById('presentation-timer').textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        function resetTimer() {
+            presentationStartTime = Date.now();
+        }
+        
+        // Add global function to window
+        window.openSpeakerConsole = openSpeakerConsole;
+        window.closeSpeakerConsole = closeSpeakerConsole;
+        window.resetTimer = resetTimer;
+    </script>
+    
+    <!-- Initialize Impress.js -->
+    <script>
+        // Enhanced Impress.js initialization with advanced features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if impress is available
+            if (typeof impress !== 'undefined') {
+                const impressApi = impress();
+                impressApi.init();
+                
+                // Enhanced step transition handling
+                document.addEventListener('impress:stepenter', function(event) {
+                    const step = event.target;
+                    
+                    // Add present class for CSS animations
+                    step.classList.add('present', 'active');
+                    
+                    // Remove present class from other steps
+                    document.querySelectorAll('.step').forEach(s => {
+                        if (s !== step) {
+                            s.classList.remove('present', 'active');
+                        }
+                    });
+                    
+                    // Trigger content animations with staggered delays
+                    const animatedElements = step.querySelectorAll('.fly-in-left, .fly-in-right, .fly-in-up, .fade-in-scale, .rotate-in, .bounce-in');
+                    animatedElements.forEach((element, index) => {
+                        element.style.animationDelay = `${0.3 + index * 0.2}s`;
+                    });
+                    
+                    // Update speaker console if open
+                    if (document.getElementById('speaker-console').style.display !== 'none') {
+                        updateSpeakerConsole();
+                    }
+                    
+                    // Add 3D perspective effects on hover for diagrams
+                    const diagrams = step.querySelectorAll('.diagram');
+                    diagrams.forEach(diagram => {
+                        diagram.addEventListener('mouseenter', () => {
+                            diagram.style.transform = 'scale(1.1) rotateY(15deg) rotateX(5deg)';
+                        });
+                        diagram.addEventListener('mouseleave', () => {
+                            diagram.style.transform = 'scale(1) rotateY(0deg) rotateX(0deg)';
+                        });
+                    });
+                });
+                
+                // Enhanced keyboard shortcuts
+                document.addEventListener('keydown', function(e) {
+                    switch(e.key) {
+                        case 'Home':
+                            impressApi.goto('title');
+                            e.preventDefault();
+                            break;
+                        case 'End':
+                            impressApi.goto('thankyou');
+                            e.preventDefault();
+                            break;
+                        case 'o':
+                        case 'O':
+                            impressApi.goto('overview');
+                            e.preventDefault();
+                            break;
+                        case 's':
+                        case 'S':
+                            if (!e.ctrlKey && !e.altKey) {
+                                openSpeakerConsole();
+                                e.preventDefault();
+                            }
+                            break;
+                        case 'Escape':
+                            closeSpeakerConsole();
+                            e.preventDefault();
+                            break;
+                        case 'r':
+                        case 'R':
+                            if (e.ctrlKey) {
+                                location.reload();
+                                e.preventDefault();
+                            }
+                            break;
+                        case 'f':
+                        case 'F':
+                            if (!e.ctrlKey && !e.altKey) {
+                                // Toggle fullscreen
+                                if (!document.fullscreenElement) {
+                                    document.documentElement.requestFullscreen();
+                                } else {
+                                    document.exitFullscreen();
+                                }
+                                e.preventDefault();
+                            }
+                            break;
+                    }
+                });
+                
+                // Auto-start presentation after a delay
+                setTimeout(() => {
+                    impressApi.goto('title');
+                }, 500);
+                
+                // Add mouse wheel navigation
+                let wheelTimeout;
+                document.addEventListener('wheel', function(e) {
+                    clearTimeout(wheelTimeout);
+                    wheelTimeout = setTimeout(() => {
+                        if (e.deltaY > 0) {
+                            impressApi.next();
+                        } else if (e.deltaY < 0) {
+                            impressApi.prev();
+                        }
+                    }, 100);
+                });
+                
+            } else {
+                console.error('Impress.js failed to load');
+                // Enhanced fallback: basic slide navigation with animations
+                let currentSlide = 0;
+                const slides = document.querySelectorAll('.step');
+                
+                function showSlide(n) {
+                    slides.forEach((slide, index) => {
+                        slide.style.display = index === n ? 'block' : 'none';
+                        if (index === n) {
+                            slide.classList.add('present', 'active');
+                        } else {
+                            slide.classList.remove('present', 'active');
+                        }
+                    });
+                }
+                
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowRight' || e.key === ' ') {
+                        currentSlide = Math.min(currentSlide + 1, slides.length - 1);
+                        showSlide(currentSlide);
+                    } else if (e.key === 'ArrowLeft') {
+                        currentSlide = Math.max(currentSlide - 1, 0);
+                        showSlide(currentSlide);
+                    }
+                });
+                
+                showSlide(0);
+            }
+        });
+        
+        // Add enhanced navigation instructions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add comprehensive navigation instructions
+            const nav = document.createElement('div');
+            nav.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-size: 13px;
+                z-index: 1000;
+                max-width: 400px;
+                line-height: 1.4;
+            `;
+            nav.innerHTML = `
+                <strong>🎮 Navigation Controls:</strong><br>
+                ← → Arrow keys or Space/Shift+Space: Navigate slides<br>
+                <strong>O</strong>: Overview • <strong>S</strong>: Speaker Console • <strong>F</strong>: Fullscreen<br>
+                <strong>Home</strong>: First slide • <strong>End</strong>: Last slide • <strong>Esc</strong>: Close console<br>
+                Mouse wheel: Navigate • Hover images: 3D effects<br>
+                <em>🎪 Enjoy the 3D rotations and dramatic transitions!</em>
+            `;
+            document.body.appendChild(nav);
+            
+            // Auto-hide navigation after 8 seconds
+            setTimeout(() => {
+                nav.style.opacity = '0';
+                nav.style.transition = 'opacity 2s';
+                setTimeout(() => nav.remove(), 2000);
+            }, 8000);
+        });
+        
+        // Add progressive enhancement for 3D effects
+        if (CSS.supports('transform-style', 'preserve-3d')) {
+            document.addEventListener('impress:stepenter', function(event) {
+                const step = event.target;
+                
+                // Add parallax effect to background elements
+                const highlights = step.querySelectorAll('.highlight-box');
+                highlights.forEach((box, index) => {
+                    box.addEventListener('mousemove', (e) => {
+                        const rect = box.getBoundingClientRect();
+                        const x = (e.clientX - rect.left) / rect.width - 0.5;
+                        const y = (e.clientY - rect.top) / rect.height - 0.5;
+                        
+                        box.style.transform = `
+                            perspective(1000px) 
+                            rotateY(${x * 10}deg) 
+                            rotateX(${-y * 10}deg) 
+                            translateZ(10px)
+                        `;
+                    });
+                    
+                    box.addEventListener('mouseleave', () => {
+                        box.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) translateZ(0px)';
+                    });
+                });
+            });
+        }
+        
+        // Add performance monitoring
+        let transitionStart;
+        document.addEventListener('impress:stepenter', () => transitionStart = performance.now());
+        document.addEventListener('impress:stepenter', () => {
+            if (transitionStart) {
+                const duration = performance.now() - transitionStart;
+                console.log(`Slide transition took ${duration.toFixed(2)}ms`);
+            }
+        });
+    </script>
+</body>
+</html>
